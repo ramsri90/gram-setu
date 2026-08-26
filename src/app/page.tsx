@@ -1,69 +1,165 @@
-import Image from "next/image";
+'use client';
 
-export default function Home() {
+import React, { useState, useMemo } from 'react';
+import { MOCK_PROBLEMS, DEFAULT_WEIGHTS, INITIAL_BUDGET } from '@/data/mockProblems';
+import { PanchayatProblem, ScoringWeights, UserRole, OptimizationResult } from '@/types';
+import { calculatePriorityScores } from '@/lib/scoring';
+import { optimizeBudgetKnapsack, runSimulatorStrategies } from '@/lib/knapsack';
+import { Navbar, ActiveTabType } from '@/components/Navbar';
+import { ScoringEngine } from '@/components/ScoringEngine';
+import { BudgetOptimizer } from '@/components/BudgetOptimizer';
+import { Simulator } from '@/components/Simulator';
+import { ProblemMap } from '@/components/ProblemMap';
+import { ImpactDashboard } from '@/components/ImpactDashboard';
+import { WorkProgress } from '@/components/WorkProgress';
+import { ProblemEntry } from '@/components/ProblemEntry';
+import { ExplainModal } from '@/components/ExplainModal';
+
+export default function GramSetuApp() {
+  const [activeTab, setActiveTab] = useState<ActiveTabType>('scoring');
+  const [userRole, setUserRole] = useState<UserRole>('official');
+  const [problems, setProblems] = useState<PanchayatProblem[]>(MOCK_PROBLEMS);
+  const [weights, setWeights] = useState<ScoringWeights>(DEFAULT_WEIGHTS);
+  const [budgetLimit, setBudgetLimit] = useState<number>(INITIAL_BUDGET);
+  const [explainProblem, setExplainProblem] = useState<PanchayatProblem | null>(null);
+
+  // Recalculate priority scores dynamically
+  const scoredProblems = useMemo(() => {
+    return calculatePriorityScores(problems, weights);
+  }, [problems, weights]);
+
+  // Recalculate 0/1 Knapsack optimization dynamically
+  const optimizationResult = useMemo(() => {
+    return optimizeBudgetKnapsack(scoredProblems, budgetLimit, 'Official Allocation Plan', 'DP Optimized');
+  }, [scoredProblems, budgetLimit]);
+
+  // Recalculate 3-plan Simulator strategies
+  const simulatorStrategies = useMemo(() => {
+    return runSimulatorStrategies(problems, budgetLimit);
+  }, [problems, budgetLimit]);
+
+  // Handlers
+  const handleResetData = () => {
+    setProblems(MOCK_PROBLEMS);
+    setWeights(DEFAULT_WEIGHTS);
+    setBudgetLimit(INITIAL_BUDGET);
+  };
+
+  const handleAddProblem = (newProblem: PanchayatProblem) => {
+    setProblems((prev) => [newProblem, ...prev]);
+  };
+
+  const handleVerifyProblem = (problemId: string, updates: Partial<PanchayatProblem>) => {
+    setProblems((prev) =>
+      prev.map((p) => (p.id === problemId ? { ...p, ...updates } : p))
+    );
+  };
+
+  const handleUpdateStatus = (problemId: string, newStatus: PanchayatProblem['status']) => {
+    setProblems((prev) =>
+      prev.map((p) => (p.id === problemId ? { ...p, status: newStatus } : p))
+    );
+  };
+
+  const handleApplyPlan = (plan: OptimizationResult) => {
+    setActiveTab('optimizer');
+  };
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
+    <div className="min-h-screen bg-[#0b0f19] text-gray-100 font-sans flex flex-col antialiased selection:bg-emerald-500 selection:text-white">
+      {/* Navigation Header */}
+      <Navbar
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        userRole={userRole}
+        setUserRole={setUserRole}
+        onResetData={handleResetData}
+        problemCount={problems.length}
+      />
+
+      {/* Main Content Area */}
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {activeTab === 'scoring' && (
+          <ScoringEngine
+            problems={scoredProblems}
+            weights={weights}
+            setWeights={setWeights}
+            onExplain={(p) => setExplainProblem(p)}
+            userRole={userRole}
+          />
+        )}
+
+        {activeTab === 'optimizer' && (
+          <BudgetOptimizer
+            budgetLimit={budgetLimit}
+            setBudgetLimit={setBudgetLimit}
+            result={optimizationResult}
+            onExplain={(p) => setExplainProblem(p)}
+            userRole={userRole}
+          />
+        )}
+
+        {activeTab === 'simulator' && (
+          <Simulator
+            planA={simulatorStrategies.planA}
+            planB={simulatorStrategies.planB}
+            planC={simulatorStrategies.planC}
+            budgetLimit={budgetLimit}
+            onApplyPlan={handleApplyPlan}
+            onExplain={(p) => setExplainProblem(p)}
+          />
+        )}
+
+        {activeTab === 'map' && (
+          <ProblemMap
+            problems={scoredProblems}
+            onExplain={(p) => setExplainProblem(p)}
+          />
+        )}
+
+        {activeTab === 'analytics' && (
+          <ImpactDashboard
+            problems={scoredProblems}
+            optimizationResult={optimizationResult}
+          />
+        )}
+
+        {activeTab === 'progress' && (
+          <WorkProgress
+            problems={problems}
+            onUpdateStatus={handleUpdateStatus}
+            userRole={userRole}
+          />
+        )}
+
+        {activeTab === 'reporting' && (
+          <ProblemEntry
+            problems={problems}
+            onAddProblem={handleAddProblem}
+            onVerifyProblem={handleVerifyProblem}
+            userRole={userRole}
+          />
+        )}
       </main>
+
+      {/* Explainable AI Modal */}
+      <ExplainModal
+        problem={explainProblem}
+        weights={weights}
+        onClose={() => setExplainProblem(null)}
+      />
+
+      {/* Footer */}
+      <footer className="border-t border-gray-900 bg-slate-950 py-6 text-center text-xs text-gray-500">
+        <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
+          <div>
+            Gram Setu — Explainable Panchayat Priority Engine & 0/1 Knapsack Optimizer
+          </div>
+          <div className="font-mono text-[11px] text-gray-600">
+            Powered by Next.js, Dynamic Programming & Multi-Criteria Decision Analysis
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
