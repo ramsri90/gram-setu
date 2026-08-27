@@ -30,15 +30,19 @@ export default function GramSetuApp() {
   const [budgetLimit, setBudgetLimit] = useState<number>(INITIAL_BUDGET);
   const [explainProblem, setExplainProblem] = useState<PanchayatProblem | null>(null);
 
-  // Load live Supabase problems if available on mount
+  // Load live Supabase problems on mount and auto-sync across all devices
   useEffect(() => {
     async function loadData() {
       const liveProblems = await fetchSupabaseProblems();
-      if (liveProblems && liveProblems.length > 0) {
+      if (liveProblems !== null) {
         setProblems(liveProblems);
       }
     }
     loadData();
+
+    // Poll live database every 3 seconds for multi-device sync across citizen & official PCs
+    const interval = setInterval(loadData, 3000);
+    return () => clearInterval(interval);
   }, []);
 
   // Recalculate priority scores dynamically
@@ -86,7 +90,11 @@ export default function GramSetuApp() {
   const handleAddProblem = async (newProblem: PanchayatProblem) => {
     setProblems((prev) => [newProblem, ...prev]);
     // Sync to Supabase in background
-    await insertSupabaseProblem(newProblem);
+    const inserted = await insertSupabaseProblem(newProblem);
+    const liveProblems = await fetchSupabaseProblems();
+    if (liveProblems !== null) {
+      setProblems(liveProblems);
+    }
   };
 
   const handleVerifyProblem = async (problemId: string, updates: Partial<PanchayatProblem>) => {

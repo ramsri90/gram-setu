@@ -73,7 +73,7 @@ CREATE TABLE IF NOT EXISTS public.budgets (
 
 -- 4. PROBLEMS Table
 CREATE TABLE IF NOT EXISTS public.problems (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id TEXT PRIMARY KEY DEFAULT ('PRB-' || floor(random() * 900 + 100)::text),
     panchayat_id TEXT NOT NULL DEFAULT 'GP-SEHORE-01',
     panchayat_name TEXT NOT NULL,
     district TEXT NOT NULL,

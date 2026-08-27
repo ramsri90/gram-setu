@@ -87,7 +87,7 @@ export async function fetchSupabaseProblems(): Promise<PanchayatProblem[] | null
 /**
  * Save new citizen problem to Supabase
  */
-export async function insertSupabaseProblem(problem: Omit<PanchayatProblem, 'id'>): Promise<PanchayatProblem | null> {
+export async function insertSupabaseProblem(problem: PanchayatProblem): Promise<PanchayatProblem | null> {
   if (!isSupabaseConfigured() || !supabase) return null;
 
   try {
@@ -98,10 +98,28 @@ export async function insertSupabaseProblem(problem: Omit<PanchayatProblem, 'id'
       .single();
 
     if (error) {
-      console.error('Error inserting problem into Supabase:', error.message);
+      console.warn('First insert attempt warning:', error.message);
+      // If error is UUID syntax error (e.g. PRB-396 is not a UUID in existing Supabase schema), retry omitting custom string ID
+      if (error.message.includes('uuid') || error.message.includes('invalid input syntax')) {
+        const { id, ...problemWithoutId } = problem;
+        const { data: retryData, error: retryError } = await supabase
+          .from('problems')
+          .insert([problemWithoutId])
+          .select()
+          .single();
+
+        if (retryError) {
+          console.error('Retry insert error:', retryError.message);
+          return null;
+        }
+
+        console.log('Successfully inserted problem to Supabase with generated ID:', retryData?.id);
+        return retryData as PanchayatProblem;
+      }
       return null;
     }
 
+    console.log('Successfully inserted problem to Supabase:', data?.id);
     return data as PanchayatProblem;
   } catch (err) {
     console.error('Failed to insert problem to Supabase:', err);
