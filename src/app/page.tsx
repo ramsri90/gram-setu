@@ -27,8 +27,19 @@ export default function GramSetuApp() {
 
   const [problems, setProblems] = useState<PanchayatProblem[]>(MOCK_PROBLEMS);
   const [weights, setWeights] = useState<ScoringWeights>(DEFAULT_WEIGHTS);
-  const [budgetLimit, setBudgetLimit] = useState<number>(INITIAL_BUDGET);
-  const [explainProblem, setExplainProblem] = useState<PanchayatProblem | null>(null);
+  // Track deleted problem IDs/titles so deleted complaints NEVER reappear on reload or auto-sync
+  const [deletedIds, setDeletedIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('gramsetu_deleted_ids');
+      if (stored) {
+        setDeletedIds(JSON.parse(stored));
+      }
+    } catch (e) {
+      console.warn('Failed to load deleted IDs from storage:', e);
+    }
+  }, []);
 
   // Restore user session from localStorage on initial render
   useEffect(() => {
@@ -56,7 +67,18 @@ export default function GramSetuApp() {
     async function loadData() {
       const liveProblems = await fetchSupabaseProblems();
       if (liveProblems !== null) {
-        setProblems(liveProblems);
+        const storedDeleted: string[] = (() => {
+          try {
+            return JSON.parse(localStorage.getItem('gramsetu_deleted_ids') || '[]');
+          } catch {
+            return [];
+          }
+        })();
+
+        const filtered = liveProblems.filter(
+          (p) => !storedDeleted.includes(p.id) && (!p.title || !storedDeleted.includes(p.title))
+        );
+        setProblems(filtered);
       }
     }
     loadData();
@@ -122,7 +144,17 @@ export default function GramSetuApp() {
     const inserted = await insertSupabaseProblem(newProblem);
     const liveProblems = await fetchSupabaseProblems();
     if (liveProblems !== null) {
-      setProblems(liveProblems);
+      const storedDeleted: string[] = (() => {
+        try {
+          return JSON.parse(localStorage.getItem('gramsetu_deleted_ids') || '[]');
+        } catch {
+          return [];
+        }
+      })();
+      const filtered = liveProblems.filter(
+        (p) => !storedDeleted.includes(p.id) && (!p.title || !storedDeleted.includes(p.title))
+      );
+      setProblems(filtered);
     }
   };
 
@@ -144,20 +176,32 @@ export default function GramSetuApp() {
 
   const handleDeleteProblem = async (problemId: string) => {
     const targetProblem = problems.find((p) => p.id === problemId);
-    // Optimistically remove from state
-    setProblems((prev) => prev.filter((p) => p.id !== problemId));
+    
+    // Store problem ID and title in persistent deleted list
+    const toDeleteKeys = [problemId, targetProblem?.title].filter(Boolean) as string[];
+    const currentDeleted: string[] = (() => {
+      try {
+        return JSON.parse(localStorage.getItem('gramsetu_deleted_ids') || '[]');
+      } catch {
+        return [];
+      }
+    })();
+    const updatedDeleted = Array.from(new Set([...currentDeleted, ...toDeleteKeys]));
+    setDeletedIds(updatedDeleted);
+    try {
+      localStorage.setItem('gramsetu_deleted_ids', JSON.stringify(updatedDeleted));
+    } catch (e) {}
+
+    // Optimistically remove from React state
+    setProblems((prev) =>
+      prev.filter((p) => p.id !== problemId && (!targetProblem?.title || p.title !== targetProblem.title))
+    );
 
     // Delete from Supabase PostgreSQL
     if (targetProblem) {
       await deleteSupabaseProblem(problemId, targetProblem.title);
     } else {
       await deleteSupabaseProblem(problemId);
-    }
-
-    // Refresh live database list to ensure state is synchronized
-    const liveProblems = await fetchSupabaseProblems();
-    if (liveProblems !== null) {
-      setProblems(liveProblems.filter((p) => p.id !== problemId));
     }
   };
 
