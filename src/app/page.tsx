@@ -27,6 +27,9 @@ export default function GramSetuApp() {
 
   const [problems, setProblems] = useState<PanchayatProblem[]>(MOCK_PROBLEMS);
   const [weights, setWeights] = useState<ScoringWeights>(DEFAULT_WEIGHTS);
+  const [budgetLimit, setBudgetLimit] = useState<number>(INITIAL_BUDGET);
+  const [explainProblem, setExplainProblem] = useState<PanchayatProblem | null>(null);
+
   // Track deleted problem IDs/titles so deleted complaints NEVER reappear on reload or auto-sync
   const [deletedIds, setDeletedIds] = useState<string[]>([]);
 
