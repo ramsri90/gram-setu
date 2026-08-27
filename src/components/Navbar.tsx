@@ -77,22 +77,26 @@ export function Navbar({
 
           {/* Right Side Controls: User Profile / Auth & Role Switcher */}
           <div className="flex items-center gap-3">
-            {/* User Session Badge or Login Modal Trigger */}
-            {currentUser ? (
+            {/* User Session Badge */}
+            {currentUser && (
               <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-teal-950/80 border border-teal-500/30 text-xs">
                 <div className="w-2 h-2 rounded-full bg-teal-400 animate-pulse" />
-                <div className="hidden sm:block">
-                  <div className="font-bold text-white leading-tight">{currentUser.full_name}</div>
-                  <div className="text-[10px] text-teal-300 uppercase font-mono">{currentUser.role}</div>
+                <div>
+                  <div className="font-bold text-white leading-tight text-[11px] sm:text-xs">{currentUser.full_name}</div>
+                  <div className="text-[9px] sm:text-[10px] text-teal-300 uppercase font-mono">{currentUser.role}</div>
                 </div>
-                <button
-                  onClick={onLogout}
-                  title="Sign Out"
-                  className="p-1 rounded-lg text-gray-400 hover:text-rose-400 hover:bg-slate-900 transition ml-1"
-                >
-                  <LogOut className="w-3.5 h-3.5" />
-                </button>
               </div>
+            )}
+
+            {/* Separate Logout Button */}
+            {currentUser ? (
+              <button
+                onClick={onLogout}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-950/80 hover:bg-rose-900 border border-rose-500/40 text-rose-200 hover:text-white font-bold text-xs shadow-md transition"
+              >
+                <LogOut className="w-3.5 h-3.5 text-rose-400" />
+                <span>Logout</span>
+              </button>
             ) : (
               <button
                 onClick={() => onOpenAuthModal('citizen')}
