@@ -30,6 +30,27 @@ export default function GramSetuApp() {
   const [budgetLimit, setBudgetLimit] = useState<number>(INITIAL_BUDGET);
   const [explainProblem, setExplainProblem] = useState<PanchayatProblem | null>(null);
 
+  // Restore user session from localStorage on initial render
+  useEffect(() => {
+    try {
+      const savedUserStr = localStorage.getItem('gramsetu_user');
+      if (savedUserStr) {
+        const savedUser: UserProfile = JSON.parse(savedUserStr);
+        if (savedUser && savedUser.id) {
+          setCurrentUser(savedUser);
+          setUserRole(savedUser.role);
+          if (savedUser.role === 'official') {
+            setActiveTab('progress');
+          } else {
+            setActiveTab('reporting');
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to restore user session:', e);
+    }
+  }, []);
+
   // Load live Supabase problems on mount and auto-sync across all devices
   useEffect(() => {
     async function loadData() {
@@ -75,6 +96,11 @@ export default function GramSetuApp() {
   const handleLoginSuccess = (user: UserProfile) => {
     setCurrentUser(user);
     setUserRole(user.role);
+    try {
+      localStorage.setItem('gramsetu_user', JSON.stringify(user));
+    } catch (e) {
+      console.warn('Could not store session in localStorage:', e);
+    }
     if (user.role === 'official') {
       setActiveTab('progress');
     } else {
@@ -85,6 +111,9 @@ export default function GramSetuApp() {
   const handleLogout = () => {
     setCurrentUser(null);
     setUserRole('citizen');
+    try {
+      localStorage.removeItem('gramsetu_user');
+    } catch (e) {}
   };
 
   const handleAddProblem = async (newProblem: PanchayatProblem) => {
