@@ -143,8 +143,22 @@ export default function GramSetuApp() {
   };
 
   const handleDeleteProblem = async (problemId: string) => {
+    const targetProblem = problems.find((p) => p.id === problemId);
+    // Optimistically remove from state
     setProblems((prev) => prev.filter((p) => p.id !== problemId));
-    await deleteSupabaseProblem(problemId);
+
+    // Delete from Supabase PostgreSQL
+    if (targetProblem) {
+      await deleteSupabaseProblem(problemId, targetProblem.title);
+    } else {
+      await deleteSupabaseProblem(problemId);
+    }
+
+    // Refresh live database list to ensure state is synchronized
+    const liveProblems = await fetchSupabaseProblems();
+    if (liveProblems !== null) {
+      setProblems(liveProblems.filter((p) => p.id !== problemId));
+    }
   };
 
   const handleApplyPlan = (plan: OptimizationResult) => {

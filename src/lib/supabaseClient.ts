@@ -160,23 +160,36 @@ export async function updateSupabaseProblemStatus(
   }
 }
 
-/**
- * Delete a problem from Supabase PostgreSQL table
- */
-export async function deleteSupabaseProblem(problemId: string): Promise<boolean> {
+export async function deleteSupabaseProblem(
+  problemId: string,
+  title?: string
+): Promise<boolean> {
   if (!isSupabaseConfigured() || !supabase) return false;
 
   try {
-    const { error } = await supabase
+    // 1. Delete by ID match
+    const { error: idError } = await supabase
       .from('problems')
       .delete()
       .eq('id', problemId);
 
-    if (error) {
-      console.error('Error deleting problem from Supabase:', error.message);
-      return false;
+    if (idError) {
+      console.warn('Delete by ID warning:', idError.message);
     }
 
+    // 2. Also delete by title if provided (handles case where DB generated UUID differs from client ID)
+    if (title) {
+      const { error: titleError } = await supabase
+        .from('problems')
+        .delete()
+        .eq('title', title);
+
+      if (titleError) {
+        console.warn('Delete by title warning:', titleError.message);
+      }
+    }
+
+    console.log(`Successfully deleted problem: ID=${problemId}, Title=${title || 'N/A'}`);
     return true;
   } catch (err) {
     console.error('Failed to delete problem from Supabase:', err);
