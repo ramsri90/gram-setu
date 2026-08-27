@@ -1,6 +1,15 @@
 export type CategoryType = 'water' | 'road' | 'electricity' | 'sanitation' | 'health' | 'education';
 
-export type ProblemStatus = 'reported' | 'verified' | 'scored' | 'funded' | 'in_progress' | 'completed';
+export type ProblemStatus = 'reported' | 'noted' | 'verified' | 'scored' | 'funded' | 'in_progress' | 'completed';
+
+export interface UserProfile {
+  id: string;
+  email: string;
+  full_name: string;
+  role: UserRole;
+  panchayat_name?: string;
+  created_at?: string;
+}
 
 export interface PanchayatProblem {
   id: string;
