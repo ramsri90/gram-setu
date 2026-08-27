@@ -1,8 +1,12 @@
 import { createClient } from '@supabase/supabase-js';
 import { PanchayatProblem, ProblemStatus, UserProfile, UserRole } from '@/types';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+const DEFAULT_SUPABASE_URL = 'https://zlzotxryaqagjytmpyft.supabase.co';
+const DEFAULT_SUPABASE_ANON_KEY =
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsem90eHJ5YXFhZ2p5dG1weWZ0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc4NDAzMTAsImV4cCI6MjEwMzQxNjMxMH0.GX_V_GF3za3IW-1pdjcr5MZOWgYK5RAeyDZTn2ckVvM';
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || DEFAULT_SUPABASE_URL;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || DEFAULT_SUPABASE_ANON_KEY;
 
 export const isSupabaseConfigured = (): boolean => {
   return Boolean(
@@ -13,9 +17,7 @@ export const isSupabaseConfigured = (): boolean => {
   );
 };
 
-export const supabase = isSupabaseConfigured()
-  ? createClient(supabaseUrl, supabaseAnonKey)
-  : null;
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 /**
  * Upload image to Supabase Storage bucket 'issue-images'
